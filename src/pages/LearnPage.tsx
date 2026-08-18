@@ -1,3 +1,4 @@
+import { ChallengePanel } from '../components/ChallengePanel';
 import { LearningPath } from '../components/LearningPath';
 
 export const LearnPage = () => {
@@ -8,11 +9,14 @@ export const LearnPage = () => {
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">Learning System</p>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900 dark:text-white">O’quv yo’llari va darslar</h1>
           <p className="mt-4 max-w-3xl text-lg text-slate-600 dark:text-slate-300">
-            Har bir kursdan modu-l, dars, mashq va challenge lar orqali robototexnika asoslarini o’rganing.
+            Har bir kursdan modul, dars, mashq va challenge lar orqali robototexnika asoslarini o’rganing.
           </p>
         </div>
 
         <LearningPath />
+        <div className="mt-8">
+          <ChallengePanel />
+        </div>
       </div>
     </div>
   );
