@@ -3,6 +3,7 @@ import { obstacleBoxes } from './environment/Obstacles';
 import { DifferentialDriveRobotAPI, DifferentialDriveSimulationEngine, type MotorModel, type RobotStatus } from './robots/robotApi';
 import { SensorManager } from './sensors/SensorManager';
 import { UltrasonicSensor } from './sensors/UltrasonicSensor';
+import { EncoderSensor } from './sensors/EncoderSensor';
 
 export type { RobotStatus };
 
@@ -14,6 +15,13 @@ export interface UltrasonicState {
   distance: number;
   maxRange: number;
   enabled: boolean;
+}
+
+export interface EncoderState {
+  distance: number;
+  maxRange: number;
+  enabled: boolean;
+  ticks: number;
 }
 
 export interface SimulatorRobotState {
@@ -28,6 +36,7 @@ export interface SimulatorRobotState {
     right: SimulatorMotorState;
   };
   ultrasonic: UltrasonicState;
+  encoder: EncoderState;
 }
 
 interface SimulatorState {
@@ -62,12 +71,19 @@ const initialRobotState: SimulatorRobotState = {
     maxRange: 2.5,
     enabled: true,
   },
+  encoder: {
+    distance: 0,
+    maxRange: 1000,
+    enabled: true,
+    ticks: 0,
+  },
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const ultrasonicSensor = new UltrasonicSensor(2.5, true);
-const sensorManager = new SensorManager([ultrasonicSensor]);
+const encoderSensor = new EncoderSensor(1000, true);
+const sensorManager = new SensorManager([ultrasonicSensor, encoderSensor]);
 const robotApi = new DifferentialDriveRobotAPI();
 const robotEngine = new DifferentialDriveSimulationEngine(robotApi);
 
@@ -94,8 +110,9 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       const nextRightMotorSpeed = clamp(motorState.rightMotorSpeed, -3, 3);
       const nextPosition: [number, number, number] = [clamp(updatedX, -8, 8), 0.4, clamp(updatedZ, -8, 8)];
 
-      sensorManager.update(nextPosition, nextRotation, obstacleBoxes);
-      const sensorReading = ultrasonicSensor.getReading();
+      sensorManager.update(nextPosition, nextRotation, obstacleBoxes, nextLeftMotorSpeed, nextRightMotorSpeed);
+      const ultrasonicReading = ultrasonicSensor.read();
+      const encoderReading = encoderSensor.read();
 
       return {
         robot: {
@@ -117,9 +134,15 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
             },
           },
           ultrasonic: {
-            distance: sensorReading.distance,
-            maxRange: sensorReading.maxRange,
-            enabled: sensorReading.enabled,
+            distance: ultrasonicReading.distance,
+            maxRange: ultrasonicReading.maxRange,
+            enabled: ultrasonicReading.enabled,
+          },
+          encoder: {
+            distance: encoderReading.distance,
+            maxRange: encoderReading.maxRange,
+            enabled: encoderReading.enabled,
+            ticks: encoderSensor.getTicks(),
           },
         },
       };
@@ -156,6 +179,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
             },
           },
           ultrasonic: mergedRobot.ultrasonic ?? initialRobotState.ultrasonic,
+          encoder: mergedRobot.encoder ?? initialRobotState.encoder,
         },
       };
     }),

@@ -38,6 +38,7 @@ export const SimulatorPage = () => {
     { label: 'Rotation', value: `${(robot.rotation * 180 / Math.PI).toFixed(0)}°` },
     { label: 'Status', value: robot.status },
     { label: 'Ultrasonic', value: `${(robot.ultrasonic.distance * 100).toFixed(1)} cm` },
+    { label: 'Encoder', value: `${robot.encoder.ticks.toFixed(0)} ticks` },
   ];
 
   const motorCards = [

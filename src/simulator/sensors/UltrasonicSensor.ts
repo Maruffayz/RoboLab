@@ -1,20 +1,17 @@
-import { Sensor, type ObstacleBox } from './Sensor';
+import { Sensor, type SensorContext } from './Sensor';
 
 export class UltrasonicSensor extends Sensor {
   constructor(maxRange = 2.5, enabled = true) {
-    super(maxRange, enabled);
+    super('ultrasonic', maxRange, enabled);
   }
 
-  update(
-    origin: [number, number, number],
-    rotationY: number,
-    obstacles: ObstacleBox[],
-  ): void {
+  update(context: SensorContext): void {
     if (!this.enabled) {
       this.distance = this.maxRange;
       return;
     }
 
+    const { origin, rotationY, obstacles } = context;
     const sensorOrigin = [origin[0], origin[1] + 0.5, origin[2]] as [number, number, number];
     const rayDirection = {
       x: Math.sin(rotationY),
