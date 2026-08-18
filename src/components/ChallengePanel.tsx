@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { challengeCatalog, evaluateChallenge, type ChallengeModel } from '../challenges/challengeEngine';
 
 interface ChallengePanelProps {
@@ -7,13 +8,29 @@ interface ChallengePanelProps {
 const challengeExamples = challengeCatalog;
 
 export const ChallengePanel = ({ challenge = challengeExamples[0] }: ChallengePanelProps) => {
-  const evaluation = evaluateChallenge(challenge, {
-    targetReached: true,
-    collision: false,
-    time: 12,
-    requiredSensor: 'ultrasonic',
-    robotState: challenge.initialRobotState,
-  });
+  const [usedHints, setUsedHints] = useState<number[]>([]);
+  const [hintsExpanded, setHintsExpanded] = useState(false);
+
+  const evaluation = evaluateChallenge(
+    challenge,
+    {
+      targetReached: true,
+      collision: false,
+      time: 12,
+      requiredSensor: 'ultrasonic',
+      robotState: challenge.initialRobotState,
+    },
+    usedHints,
+  );
+
+  const toggleHint = (level: number) => {
+    setUsedHints((prev) => (prev.includes(level) ? prev.filter((h) => h !== level) : [...prev].sort().concat(level).sort()));
+  };
+
+  const totalHintPenalty = usedHints.reduce((total, hintLevel) => {
+    const hint = challenge.hints.find((h) => h.level === hintLevel);
+    return total + (hint?.penalty || 0);
+  }, 0);
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -63,6 +80,54 @@ export const ChallengePanel = ({ challenge = challengeExamples[0] }: ChallengePa
             <div className="flex items-center justify-between"><span>Required sensor</span><strong>{challenge.rules.some((rule) => rule.toLowerCase().includes('sensor')) ? 'Ultrasonic' : 'N/A'}</strong></div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+        <button
+          onClick={() => setHintsExpanded(!hintsExpanded)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">Hints</p>
+            <p className="mt-1 text-sm text-amber-800 dark:text-amber-100">
+              {usedHints.length > 0 ? `${usedHints.length} hint(s) used` : 'Click to reveal progressive hints'}
+            </p>
+          </div>
+          <div className="text-amber-700 dark:text-amber-300">{hintsExpanded ? '▼' : '▶'}</div>
+        </button>
+
+        {hintsExpanded && (
+          <div className="mt-4 space-y-3">
+            {challenge.hints.map((hint) => (
+              <button
+                key={hint.id}
+                onClick={() => toggleHint(hint.level)}
+                className={`w-full rounded-lg border-2 p-3 text-left transition-all ${
+                  usedHints.includes(hint.level)
+                    ? 'border-amber-400 bg-amber-100 dark:border-amber-600 dark:bg-amber-900/40'
+                    : 'border-amber-200 bg-white dark:border-amber-900 dark:bg-slate-950'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-700 dark:text-amber-300">
+                      Hint {hint.level}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{hint.text}</p>
+                  </div>
+                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                    {usedHints.includes(hint.level) ? `✓ -${hint.penalty}` : `-${hint.penalty}`}
+                  </div>
+                </div>
+              </button>
+            ))}
+            {totalHintPenalty > 0 && (
+              <div className="rounded-lg bg-amber-100 p-2 text-center text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                Total hint penalty: -{totalHintPenalty}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
