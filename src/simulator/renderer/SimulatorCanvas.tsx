@@ -11,6 +11,7 @@ import { useSimulatorStore } from '../store';
 const RobotRig = () => {
   const bodyRef = useRef<RapierRigidBody>(null);
   const robot = useSimulatorStore((state) => state.robot);
+  const sensorDistance = useSimulatorStore((state) => state.robot.ultrasonic.distance);
 
   useFrame((_, delta) => {
     const store = useSimulatorStore.getState();
@@ -61,6 +62,12 @@ const RobotRig = () => {
     >
       <CuboidCollider args={[0.9, 0.35, 0.7]} friction={1.5} restitution={0.05} />
       <DifferentialDriveRobot position={[0, 0, 0]} rotationY={0} scale={1.2} />
+      <group position={[0, 0.5, 0.7]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0, sensorDistance / 2]}>
+          <boxGeometry args={[0.06, 0.06, Math.max(sensorDistance, 0.2)]} />
+          <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={0.7} transparent opacity={0.8} />
+        </mesh>
+      </group>
     </RigidBody>
   );
 };

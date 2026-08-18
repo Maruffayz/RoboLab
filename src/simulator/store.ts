@@ -1,15 +1,19 @@
 import { create } from 'zustand';
-import {
-  DifferentialDriveRobotAPI,
-  DifferentialDriveSimulationEngine,
-  type MotorModel,
-  type RobotStatus,
-} from './robots/robotApi';
+import { obstacleBoxes } from './environment/Obstacles';
+import { DifferentialDriveRobotAPI, DifferentialDriveSimulationEngine, type MotorModel, type RobotStatus } from './robots/robotApi';
+import { SensorManager } from './sensors/SensorManager';
+import { UltrasonicSensor } from './sensors/UltrasonicSensor';
 
 export type { RobotStatus };
 
 export interface SimulatorMotorState extends MotorModel {
   label: string;
+}
+
+export interface UltrasonicState {
+  distance: number;
+  maxRange: number;
+  enabled: boolean;
 }
 
 export interface SimulatorRobotState {
@@ -23,6 +27,7 @@ export interface SimulatorRobotState {
     left: SimulatorMotorState;
     right: SimulatorMotorState;
   };
+  ultrasonic: UltrasonicState;
 }
 
 interface SimulatorState {
@@ -52,10 +57,17 @@ const initialRobotState: SimulatorRobotState = {
     left: createMotorState(0, 'Left Motor'),
     right: createMotorState(0, 'Right Motor'),
   },
+  ultrasonic: {
+    distance: 2.5,
+    maxRange: 2.5,
+    enabled: true,
+  },
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+const ultrasonicSensor = new UltrasonicSensor(2.5, true);
+const sensorManager = new SensorManager([ultrasonicSensor]);
 const robotApi = new DifferentialDriveRobotAPI();
 const robotEngine = new DifferentialDriveSimulationEngine(robotApi);
 
@@ -80,11 +92,15 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
       const nextLeftMotorSpeed = clamp(motorState.leftMotorSpeed, -3, 3);
       const nextRightMotorSpeed = clamp(motorState.rightMotorSpeed, -3, 3);
+      const nextPosition: [number, number, number] = [clamp(updatedX, -8, 8), 0.4, clamp(updatedZ, -8, 8)];
+
+      sensorManager.update(nextPosition, nextRotation, obstacleBoxes);
+      const sensorReading = ultrasonicSensor.getReading();
 
       return {
         robot: {
           ...current,
-          position: [clamp(updatedX, -8, 8), 0.4, clamp(updatedZ, -8, 8)],
+          position: nextPosition,
           rotation: nextRotation,
           velocity: clamp(nextVelocity, -2.8, 2.8),
           leftMotorSpeed: nextLeftMotorSpeed,
@@ -99,6 +115,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
               ...createMotorState(nextRightMotorSpeed, 'Right Motor'),
               label: 'Right Motor',
             },
+          },
+          ultrasonic: {
+            distance: sensorReading.distance,
+            maxRange: sensorReading.maxRange,
+            enabled: sensorReading.enabled,
           },
         },
       };
@@ -134,6 +155,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
               label: 'Right Motor',
             },
           },
+          ultrasonic: mergedRobot.ultrasonic ?? initialRobotState.ultrasonic,
         },
       };
     }),

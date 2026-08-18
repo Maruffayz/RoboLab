@@ -1,9 +1,17 @@
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
+import type { ObstacleBox } from '../sensors/Sensor';
 
 interface ObstacleProps {
   position: [number, number, number];
   size: [number, number, number];
 }
+
+export const obstacleBoxes: ObstacleBox[] = [
+  { position: [0, 0.75, -4.5], size: [4, 1.5, 0.6] },
+  { position: [-4.5, 0.75, 0], size: [0.6, 1.5, 4] },
+  { position: [4.5, 0.75, 2], size: [0.6, 1.5, 5] },
+  { position: [0, 0.75, 4.5], size: [4.5, 1.5, 0.6] },
+];
 
 export const Obstacle = ({ position, size }: ObstacleProps) => (
   <RigidBody type="fixed" position={position} colliders={false}>
@@ -17,9 +25,8 @@ export const Obstacle = ({ position, size }: ObstacleProps) => (
 
 export const EnvironmentObstacles = () => (
   <>
-    <Obstacle position={[0, 0.75, -4.5]} size={[4, 1.5, 0.6]} />
-    <Obstacle position={[-4.5, 0.75, 0]} size={[0.6, 1.5, 4]} />
-    <Obstacle position={[4.5, 0.75, 2]} size={[0.6, 1.5, 5]} />
-    <Obstacle position={[0, 0.75, 4.5]} size={[4.5, 1.5, 0.6]} />
+    {obstacleBoxes.map((obstacle, index) => (
+      <Obstacle key={index} position={obstacle.position} size={obstacle.size} />
+    ))}
   </>
 );
