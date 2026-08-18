@@ -1,5 +1,5 @@
 export type CommandLogEntry = {
-  type: 'info' | 'warn' | 'error';
+  type: 'info' | 'warn' | 'error' | 'success';
   message: string;
 };
 
@@ -93,7 +93,7 @@ export class ControlledCommandRunner {
         throw new Error('Unknown robot command.');
       }
 
-      this.onLog({ type: 'info', message: 'Script executed successfully.' });
+      this.onLog({ type: 'success', message: 'Script executed successfully.' });
       logs.push('Script executed successfully.');
       return logs;
     } catch (error) {

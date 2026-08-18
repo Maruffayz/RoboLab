@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Badge } from '../design-system';
 import { useSimulatorStore } from '../simulator/store';
@@ -11,20 +11,46 @@ robot.turn_left(15)
 robot.stop()
 `;
 
+type ConsoleLevel = 'info' | 'warning' | 'error' | 'success';
+
+type ConsoleEntry = {
+  id: number;
+  level: ConsoleLevel;
+  message: string;
+};
+
+const levelStyles: Record<ConsoleLevel, string> = {
+  info: 'border-sky-500/30 bg-sky-500/10 text-sky-200',
+  warning: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+  error: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+  success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
+};
+
 export const SimulatorPage = () => {
   const robot = useSimulatorStore((state) => state.robot);
   const setKey = useSimulatorStore((state) => state.setKey);
   const applyMotorCommand = useSimulatorStore((state) => state.applyMotorCommand);
   const reset = useSimulatorStore((state) => state.reset);
   const [code, setCode] = useState(defaultScript);
-  const [consoleLogs, setConsoleLogs] = useState<string[]>(['Console ready.']);
+  const [consoleLogs, setConsoleLogs] = useState<ConsoleEntry[]>([
+    { id: 1, level: 'success', message: 'Simulation started' },
+    { id: 2, level: 'info', message: 'Robot initialized' },
+    { id: 3, level: 'info', message: `Motor left: ${Math.round(Math.abs(robot.motors.left.speed) / 3 * 100)}%` },
+    { id: 4, level: 'info', message: `Motor right: ${Math.round(Math.abs(robot.motors.right.speed) / 3 * 100)}%` },
+    { id: 5, level: 'info', message: `Ultrasonic: ${robot.ultrasonic.distance.toFixed(1)} cm` },
+    { id: 6, level: 'success', message: 'Robot moving' },
+  ]);
+
+  const appendLog = useCallback((level: ConsoleLevel, message: string) => {
+    setConsoleLogs((current) => [...current, { id: Date.now() + Math.random(), level, message }]);
+  }, []);
 
   const runner = useMemo(
     () =>
       new ControlledCommandRunner((entry) => {
-        setConsoleLogs((current) => [...current, `${entry.type.toUpperCase()}: ${entry.message}`]);
+        appendLog(entry.type === 'warn' ? 'warning' : entry.type, entry.message);
       }),
-    [],
+    [appendLog],
   );
 
   useEffect(() => {
@@ -67,6 +93,11 @@ export const SimulatorPage = () => {
   ];
 
   const runScript = () => {
+    appendLog('info', 'Simulation started');
+    appendLog('info', `Motor left: ${Math.round(Math.abs(robot.motors.left.speed) / 3 * 100)}%`);
+    appendLog('info', `Motor right: ${Math.round(Math.abs(robot.motors.right.speed) / 3 * 100)}%`);
+    appendLog('info', `Ultrasonic: ${robot.ultrasonic.distance.toFixed(1)} cm`);
+
     const logs = runner.run(code, {
       distance: robot.ultrasonic.distance,
       forward: (speed: number) => applyMotorCommand(speed, speed, 'forward'),
@@ -77,12 +108,15 @@ export const SimulatorPage = () => {
       get_distance: () => robot.ultrasonic.distance,
     });
 
-    setConsoleLogs((current) => [...current, ...logs]);
+    logs.forEach((log) => {
+      const normalized = log.startsWith('Error:') ? 'error' : log.includes('success') || log.includes('Success') ? 'success' : 'info';
+      appendLog(normalized, log);
+    });
   };
 
   const stopScript = () => {
     applyMotorCommand(0, 0, 'idle');
-    setConsoleLogs((current) => [...current, 'Execution stopped.']);
+    appendLog('warning', 'Execution stopped.');
   };
 
   return (
@@ -105,7 +139,7 @@ export const SimulatorPage = () => {
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Code Editor</h2>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={runScript} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500">Run</button>
-                <button type="button" onClick={() => { reset(); setConsoleLogs(['Console reset.']); }} className="rounded-xl bg-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">Reset</button>
+                <button type="button" onClick={() => { reset(); setConsoleLogs([]); appendLog('info', 'Console cleared'); }} className="rounded-xl bg-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">Reset</button>
                 <button type="button" onClick={stopScript} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-500">Stop</button>
               </div>
             </div>
@@ -185,14 +219,27 @@ export const SimulatorPage = () => {
         </div>
 
         <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-950 p-4 text-sm text-slate-200 shadow-sm dark:border-slate-800">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="font-semibold text-white">Console</h2>
-            <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Output</span>
+            <button
+              type="button"
+              onClick={() => setConsoleLogs([])}
+              className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
+            >
+              Clear
+            </button>
           </div>
-          <div className="max-h-40 space-y-1 overflow-auto font-mono text-xs">
-            {consoleLogs.map((line, index) => (
-              <div key={`${line}-${index}`} className="text-slate-300">{line}</div>
-            ))}
+          <div className="max-h-56 space-y-2 overflow-auto font-mono text-xs">
+            {consoleLogs.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-3 text-slate-400">Console cleared.</div>
+            ) : (
+              consoleLogs.map((entry) => (
+                <div key={entry.id} className={`rounded-xl border px-3 py-2 ${levelStyles[entry.level]}`}>
+                  <span className="mr-2 font-bold uppercase tracking-[0.12em]">{entry.level}</span>
+                  <span>{entry.message}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
