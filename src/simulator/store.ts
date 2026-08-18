@@ -1,7 +1,16 @@
 import { create } from 'zustand';
-import { DifferentialDriveRobotAPI, DifferentialDriveSimulationEngine, type RobotStatus } from './robots/robotApi';
+import {
+  DifferentialDriveRobotAPI,
+  DifferentialDriveSimulationEngine,
+  type MotorModel,
+  type RobotStatus,
+} from './robots/robotApi';
 
 export type { RobotStatus };
+
+export interface SimulatorMotorState extends MotorModel {
+  label: string;
+}
 
 export interface SimulatorRobotState {
   position: [number, number, number];
@@ -10,6 +19,10 @@ export interface SimulatorRobotState {
   leftMotorSpeed: number;
   rightMotorSpeed: number;
   status: RobotStatus;
+  motors: {
+    left: SimulatorMotorState;
+    right: SimulatorMotorState;
+  };
 }
 
 interface SimulatorState {
@@ -21,6 +34,13 @@ interface SimulatorState {
   reset: () => void;
 }
 
+const createMotorState = (speed: number, label: string): SimulatorMotorState => ({
+  speed,
+  direction: speed > 0 ? 'forward' : speed < 0 ? 'reverse' : 'stop',
+  enabled: Math.abs(speed) > 0.01,
+  label,
+});
+
 const initialRobotState: SimulatorRobotState = {
   position: [0, 0.4, 0],
   rotation: 0,
@@ -28,6 +48,10 @@ const initialRobotState: SimulatorRobotState = {
   leftMotorSpeed: 0,
   rightMotorSpeed: 0,
   status: 'idle',
+  motors: {
+    left: createMotorState(0, 'Left Motor'),
+    right: createMotorState(0, 'Right Motor'),
+  },
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -54,15 +78,28 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       const updatedX = current.position[0] + forwardX;
       const updatedZ = current.position[2] + forwardZ;
 
+      const nextLeftMotorSpeed = clamp(motorState.leftMotorSpeed, -3, 3);
+      const nextRightMotorSpeed = clamp(motorState.rightMotorSpeed, -3, 3);
+
       return {
         robot: {
           ...current,
           position: [clamp(updatedX, -8, 8), 0.4, clamp(updatedZ, -8, 8)],
           rotation: nextRotation,
           velocity: clamp(nextVelocity, -2.8, 2.8),
-          leftMotorSpeed: clamp(motorState.leftMotorSpeed, -3, 3),
-          rightMotorSpeed: clamp(motorState.rightMotorSpeed, -3, 3),
+          leftMotorSpeed: nextLeftMotorSpeed,
+          rightMotorSpeed: nextRightMotorSpeed,
           status: motorState.status,
+          motors: {
+            left: {
+              ...createMotorState(nextLeftMotorSpeed, 'Left Motor'),
+              label: 'Left Motor',
+            },
+            right: {
+              ...createMotorState(nextRightMotorSpeed, 'Right Motor'),
+              label: 'Right Motor',
+            },
+          },
         },
       };
     });
@@ -75,12 +112,31 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       },
     })),
   setRobot: (robot) =>
-    set((state) => ({
-      robot: {
+    set((state) => {
+      const mergedRobot = {
         ...state.robot,
         ...robot,
-      },
-    })),
+      };
+
+      const leftMotorSpeed = mergedRobot.leftMotorSpeed ?? 0;
+      const rightMotorSpeed = mergedRobot.rightMotorSpeed ?? 0;
+
+      return {
+        robot: {
+          ...mergedRobot,
+          motors: {
+            left: {
+              ...createMotorState(leftMotorSpeed, 'Left Motor'),
+              label: 'Left Motor',
+            },
+            right: {
+              ...createMotorState(rightMotorSpeed, 'Right Motor'),
+              label: 'Right Motor',
+            },
+          },
+        },
+      };
+    }),
   reset: () =>
     set({
       keys: { w: false, a: false, s: false, d: false, ' ': false },

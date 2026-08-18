@@ -39,6 +39,11 @@ export const SimulatorPage = () => {
     { label: 'Status', value: robot.status },
   ];
 
+  const motorCards = [
+    { label: 'Left Motor', motor: robot.motors.left },
+    { label: 'Right Motor', motor: robot.motors.right },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -66,6 +71,28 @@ export const SimulatorPage = () => {
                   <div key={item.label} className="flex items-center justify-between gap-4">
                     <span>{item.label}</span>
                     <strong className="text-slate-900 dark:text-white">{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Motor panel</h2>
+              <div className="mt-4 space-y-3">
+                {motorCards.map(({ label, motor }) => (
+                  <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/70">
+                    <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
+                      <span>{label}</span>
+                      <span className="font-medium text-slate-900 dark:text-white">{motor.enabled ? 'Enabled' : 'Disabled'}</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-slate-500 dark:text-slate-400">Speed</span>
+                      <strong className="text-slate-900 dark:text-white">{Math.abs(motor.speed).toFixed(1)}</strong>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-sm">
+                      <span className="text-slate-500 dark:text-slate-400">Direction</span>
+                      <strong className="capitalize text-slate-900 dark:text-white">{motor.direction}</strong>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -1,9 +1,21 @@
 export type RobotStatus = 'idle' | 'forward' | 'backward' | 'turning-left' | 'turning-right';
+export type MotorDirection = 'forward' | 'reverse' | 'stop';
 
 export interface MotorState {
   leftMotorSpeed: number;
   rightMotorSpeed: number;
   status: RobotStatus;
+}
+
+export interface MotorModel {
+  speed: number;
+  direction: MotorDirection;
+  enabled: boolean;
+}
+
+export interface MotorSystemState {
+  left: MotorModel;
+  right: MotorModel;
 }
 
 export type RobotInputState = Record<string, boolean>;
@@ -18,12 +30,58 @@ export interface RobotAPI {
   getMotorState(): MotorState;
 }
 
+export class DifferentialDriveMotorSystem {
+  left: MotorModel;
+  right: MotorModel;
+
+  constructor() {
+    this.left = { speed: 0, direction: 'stop', enabled: false };
+    this.right = { speed: 0, direction: 'stop', enabled: false };
+  }
+
+  setLeftMotor(speed: number): void {
+    this.left = this.createMotorModel(speed);
+  }
+
+  setRightMotor(speed: number): void {
+    this.right = this.createMotorModel(speed);
+  }
+
+  applyMotorSpeeds(leftSpeed: number, rightSpeed: number): void {
+    this.left = this.createMotorModel(leftSpeed);
+    this.right = this.createMotorModel(rightSpeed);
+  }
+
+  getState(): MotorSystemState {
+    return {
+      left: { ...this.left },
+      right: { ...this.right },
+    };
+  }
+
+  private createMotorModel(speed: number): MotorModel {
+    const enabled = Math.abs(speed) > 0.01;
+    const direction = speed > 0 ? 'forward' : speed < 0 ? 'reverse' : 'stop';
+
+    return {
+      speed,
+      direction,
+      enabled,
+    };
+  }
+}
+
 export class DifferentialDriveRobotAPI implements RobotAPI {
   private state: MotorState = {
     leftMotorSpeed: 0,
     rightMotorSpeed: 0,
     status: 'idle',
   };
+  private readonly motors: DifferentialDriveMotorSystem;
+
+  constructor() {
+    this.motors = new DifferentialDriveMotorSystem();
+  }
 
   forward(speed: number): void {
     this.applyMotorState(speed, speed, 'forward');
@@ -51,10 +109,15 @@ export class DifferentialDriveRobotAPI implements RobotAPI {
       rightMotorSpeed: right,
       status: this.resolveStatus(left, right),
     };
+    this.motors.applyMotorSpeeds(left, right);
   }
 
   getMotorState(): MotorState {
     return { ...this.state };
+  }
+
+  getMotorSystem(): MotorSystemState {
+    return this.motors.getState();
   }
 
   private applyMotorState(left: number, right: number, status: RobotStatus): void {
@@ -63,6 +126,7 @@ export class DifferentialDriveRobotAPI implements RobotAPI {
       rightMotorSpeed: right,
       status,
     };
+    this.motors.applyMotorSpeeds(left, right);
   }
 
   private resolveStatus(left: number, right: number): RobotStatus {
