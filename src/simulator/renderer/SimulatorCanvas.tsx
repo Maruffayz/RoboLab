@@ -1,7 +1,18 @@
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Ground } from '../environment/Ground';
 import { DifferentialDriveRobot } from '../robots/DifferentialDriveRobot';
+import { useSimulatorStore } from '../store';
+
+const RobotRig = () => {
+  const robot = useSimulatorStore((state) => state.robot);
+
+  useFrame((_, delta) => {
+    useSimulatorStore.getState().tick(delta);
+  });
+
+  return <DifferentialDriveRobot position={robot.position} rotationY={robot.rotation} scale={1.2} />;
+};
 
 export const SimulatorCanvas = () => {
   return (
@@ -15,7 +26,7 @@ export const SimulatorCanvas = () => {
         <spotLight position={[-6, 7, 6]} angle={0.45} intensity={1.3} penumbra={0.8} color="#bfdbfe" />
 
         <Ground size={18} />
-        <DifferentialDriveRobot position={[0, 0.4, 0]} rotationY={Math.PI / 4} scale={1.2} />
+        <RobotRig />
 
         <OrbitControls enablePan enableZoom enableRotate maxPolarAngle={Math.PI / 2.2} minDistance={4} maxDistance={16} />
       </Canvas>
