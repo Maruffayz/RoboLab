@@ -45,6 +45,7 @@ interface SimulatorState {
   tick: (dt: number) => void;
   setKey: (key: string, pressed: boolean) => void;
   setRobot: (robot: Partial<SimulatorRobotState>) => void;
+  applyMotorCommand: (left: number, right: number, status?: RobotStatus) => void;
   reset: () => void;
 }
 
@@ -180,6 +181,30 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
           },
           ultrasonic: mergedRobot.ultrasonic ?? initialRobotState.ultrasonic,
           encoder: mergedRobot.encoder ?? initialRobotState.encoder,
+        },
+      };
+    }),
+  applyMotorCommand: (left, right, status = 'idle') =>
+    set((state) => {
+      const nextLeftMotorSpeed = clamp(left, -3, 3);
+      const nextRightMotorSpeed = clamp(right, -3, 3);
+
+      return {
+        robot: {
+          ...state.robot,
+          leftMotorSpeed: nextLeftMotorSpeed,
+          rightMotorSpeed: nextRightMotorSpeed,
+          status,
+          motors: {
+            left: {
+              ...createMotorState(nextLeftMotorSpeed, 'Left Motor'),
+              label: 'Left Motor',
+            },
+            right: {
+              ...createMotorState(nextRightMotorSpeed, 'Right Motor'),
+              label: 'Right Motor',
+            },
+          },
         },
       };
     }),

@@ -1,11 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Editor from '@monaco-editor/react';
 import { Badge } from '../design-system';
 import { useSimulatorStore } from '../simulator/store';
 import { SimulatorCanvas } from '../simulator/renderer/SimulatorCanvas';
+import { ControlledCommandRunner } from '../simulator/code/ControlledCommandRunner';
+
+const defaultScript = `robot.forward(50)
+robot.get_distance()
+robot.turn_left(15)
+robot.stop()
+`;
 
 export const SimulatorPage = () => {
   const robot = useSimulatorStore((state) => state.robot);
   const setKey = useSimulatorStore((state) => state.setKey);
+  const applyMotorCommand = useSimulatorStore((state) => state.applyMotorCommand);
+  const reset = useSimulatorStore((state) => state.reset);
+  const [code, setCode] = useState(defaultScript);
+  const [consoleLogs, setConsoleLogs] = useState<string[]>(['Console ready.']);
+
+  const runner = useMemo(
+    () =>
+      new ControlledCommandRunner((entry) => {
+        setConsoleLogs((current) => [...current, `${entry.type.toUpperCase()}: ${entry.message}`]);
+      }),
+    [],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -46,9 +66,28 @@ export const SimulatorPage = () => {
     { label: 'Right Motor', motor: robot.motors.right },
   ];
 
+  const runScript = () => {
+    const logs = runner.run(code, {
+      distance: robot.ultrasonic.distance,
+      forward: (speed: number) => applyMotorCommand(speed, speed, 'forward'),
+      backward: (speed: number) => applyMotorCommand(-speed, -speed, 'backward'),
+      turn_left: (speed: number) => applyMotorCommand(-speed, speed, 'turning-left'),
+      turn_right: (speed: number) => applyMotorCommand(speed, -speed, 'turning-right'),
+      stop: () => applyMotorCommand(0, 0, 'idle'),
+      get_distance: () => robot.ultrasonic.distance,
+    });
+
+    setConsoleLogs((current) => [...current, ...logs]);
+  };
+
+  const stopScript = () => {
+    applyMotorCommand(0, 0, 'idle');
+    setConsoleLogs((current) => [...current, 'Execution stopped.']);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">Simulation Lab</p>
@@ -60,24 +99,56 @@ export const SimulatorPage = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.45fr_0.55fr]">
+        <div className="mb-6 grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Code Editor</h2>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={runScript} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500">Run</button>
+                <button type="button" onClick={() => { reset(); setConsoleLogs(['Console reset.']); }} className="rounded-xl bg-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">Reset</button>
+                <button type="button" onClick={stopScript} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-500">Stop</button>
+              </div>
+            </div>
+            <div className="h-[360px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+              <Editor
+                height="100%"
+                defaultLanguage="python"
+                theme="vs-dark"
+                value={code}
+                onChange={(value) => setCode(value ?? defaultScript)}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  lineNumbers: 'on',
+                  padding: { top: 16 },
+                  scrollBeyondLastLine: false,
+                  roundedSelection: false,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">HUD</h2>
+            </div>
+            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+              {hudItems.map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+                  <span>{item.label}</span>
+                  <strong className="text-slate-900 dark:text-white">{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <SimulatorCanvas />
           </div>
 
           <aside className="space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">HUD</h2>
-              <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                {hudItems.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-4">
-                    <span>{item.label}</span>
-                    <strong className="text-slate-900 dark:text-white">{item.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Motor panel</h2>
               <div className="mt-4 space-y-3">
@@ -111,6 +182,18 @@ export const SimulatorPage = () => {
               </ul>
             </div>
           </aside>
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-950 p-4 text-sm text-slate-200 shadow-sm dark:border-slate-800">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-semibold text-white">Console</h2>
+            <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Output</span>
+          </div>
+          <div className="max-h-40 space-y-1 overflow-auto font-mono text-xs">
+            {consoleLogs.map((line, index) => (
+              <div key={`${line}-${index}`} className="text-slate-300">{line}</div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
