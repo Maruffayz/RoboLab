@@ -119,31 +119,63 @@ export const SimulatorPage = () => {
     appendLog('warning', 'Execution stopped.');
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">Simulation Lab</p>
-            <h1 className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">Robot playground</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="success">Online</Badge>
-            <span className="text-sm text-slate-500 dark:text-slate-400">WASD / Space</span>
-          </div>
-        </div>
+  useEffect(() => {
+    const handleShortcuts = (event: KeyboardEvent) => {
+      const isMetaPressed = event.metaKey || event.ctrlKey;
+      if (isMetaPressed && event.key === 'Enter') {
+        event.preventDefault();
+        runScript();
+      }
 
-        <div className="mb-6 grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Code Editor</h2>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={runScript} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500">Run</button>
-                <button type="button" onClick={() => { reset(); setConsoleLogs([]); appendLog('info', 'Console cleared'); }} className="rounded-xl bg-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">Reset</button>
-                <button type="button" onClick={stopScript} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-500">Stop</button>
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        stopScript();
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcuts);
+    return () => window.removeEventListener('keydown', handleShortcuts);
+  }, [runScript, stopScript]);
+
+  const sensorCards = [
+    { label: 'Ultrasonic', value: `${robot.ultrasonic.distance.toFixed(1)} cm` },
+    { label: 'Encoder', value: `${robot.encoder.ticks.toFixed(0)} ticks` },
+    { label: 'Max range', value: `${robot.ultrasonic.maxRange.toFixed(1)} cm` },
+    { label: 'Status', value: robot.status },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
+        <div className="mx-auto max-w-[1600px] px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-lg font-black tracking-tight text-white">RoboLab</div>
+              <div className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-300">
+                Lesson
               </div>
             </div>
-            <div className="h-[360px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={runScript} className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">Run</button>
+              <button type="button" onClick={stopScript} className="rounded-xl bg-rose-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-400">Stop</button>
+              <button type="button" onClick={() => { reset(); setConsoleLogs([]); appendLog('info', 'Console cleared'); }} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800">Reset</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid gap-4 xl:grid-cols-[1.08fr_1.42fr]">
+          <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl shadow-slate-950/20">
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Code</h2>
+              </div>
+              <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">Python</span>
+            </div>
+            <div className="h-[500px] overflow-hidden">
               <Editor
                 height="100%"
                 defaultLanguage="python"
@@ -157,92 +189,99 @@ export const SimulatorPage = () => {
                   padding: { top: 16 },
                   scrollBeyondLastLine: false,
                   roundedSelection: false,
+                  wordWrap: 'on',
                 }}
               />
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">HUD</h2>
+          <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl shadow-slate-950/20">
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/80 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Simulator</h2>
+              </div>
+              <Badge variant="success">Online</Badge>
             </div>
-            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              {hudItems.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/70">
+            <div className="h-[500px]">
+              <SimulatorCanvas />
+            </div>
+          </section>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Console</h3>
+              <button
+                type="button"
+                onClick={() => setConsoleLogs([])}
+                className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-200 hover:border-slate-500"
+              >
+                Clear
+              </button>
+            </div>
+            <div className="max-h-56 space-y-2 overflow-auto font-mono text-xs">
+              {consoleLogs.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-3 text-slate-400">Console cleared.</div>
+              ) : (
+                consoleLogs.map((entry) => (
+                  <div key={entry.id} className={`rounded-xl border px-3 py-2 ${levelStyles[entry.level]}`}>
+                    <span className="mr-2 font-bold uppercase tracking-[0.12em]">{entry.level}</span>
+                    <span>{entry.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-4">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Sensors</h3>
+            <div className="space-y-3">
+              {sensorCards.map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-300">
                   <span>{item.label}</span>
-                  <strong className="text-slate-900 dark:text-white">{item.value}</strong>
+                  <strong className="text-slate-100">{item.value}</strong>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+          </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <SimulatorCanvas />
-          </div>
-
-          <aside className="space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Motor panel</h2>
-              <div className="mt-4 space-y-3">
-                {motorCards.map(({ label, motor }) => (
-                  <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/70">
-                    <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
-                      <span>{label}</span>
-                      <span className="font-medium text-slate-900 dark:text-white">{motor.enabled ? 'Enabled' : 'Disabled'}</span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-slate-500 dark:text-slate-400">Speed</span>
-                      <strong className="text-slate-900 dark:text-white">{Math.abs(motor.speed).toFixed(1)}</strong>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-sm">
-                      <span className="text-slate-500 dark:text-slate-400">Direction</span>
-                      <strong className="capitalize text-slate-900 dark:text-white">{motor.direction}</strong>
-                    </div>
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-4">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Motors</h3>
+            <div className="space-y-3">
+              {motorCards.map(({ label, motor }) => (
+                <div key={label} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
+                  <div className="flex items-center justify-between text-sm text-slate-300">
+                    <span>{label}</span>
+                    <span className="font-medium text-slate-100">{motor.enabled ? 'Enabled' : 'Disabled'}</span>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Controls</h2>
-              <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                <li>• W = Forward</li>
-                <li>• S = Backward</li>
-                <li>• A = Left</li>
-                <li>• D = Right</li>
-                <li>• Space = Stop</li>
-              </ul>
-            </div>
-          </aside>
-        </div>
-
-        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-950 p-4 text-sm text-slate-200 shadow-sm dark:border-slate-800">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-white">Console</h2>
-            <button
-              type="button"
-              onClick={() => setConsoleLogs([])}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-700"
-            >
-              Clear
-            </button>
-          </div>
-          <div className="max-h-56 space-y-2 overflow-auto font-mono text-xs">
-            {consoleLogs.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-3 text-slate-400">Console cleared.</div>
-            ) : (
-              consoleLogs.map((entry) => (
-                <div key={entry.id} className={`rounded-xl border px-3 py-2 ${levelStyles[entry.level]}`}>
-                  <span className="mr-2 font-bold uppercase tracking-[0.12em]">{entry.level}</span>
-                  <span>{entry.message}</span>
+                  <div className="mt-3 flex items-center justify-between text-sm text-slate-400">
+                    <span>Speed</span>
+                    <strong className="text-slate-100">{Math.abs(motor.speed).toFixed(1)}</strong>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-sm text-slate-400">
+                    <span>Direction</span>
+                    <strong className="capitalize text-slate-100">{motor.direction}</strong>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-4">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Robot State</h3>
+            <div className="space-y-3">
+              {hudItems.map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/60 px-3 py-2 text-sm text-slate-300">
+                  <span>{item.label}</span>
+                  <strong className="text-slate-100">{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
