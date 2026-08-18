@@ -1,18 +1,18 @@
+import { LearningPath } from '../components/LearningPath';
+
 export const LearnPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-        <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-8">
-          Darslar
-        </h1>
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-12 shadow-lg">
-          <p className="text-2xl text-gray-700 dark:text-gray-400">
-            Darslar bo'limi hozircha ishlanmoqda...
-          </p>
-          <p className="text-gray-600 dark:text-gray-500 mt-4">
-            Tez orada yangilangan darslar keladi!
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mb-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">Learning System</p>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900 dark:text-white">O’quv yo’llari va darslar</h1>
+          <p className="mt-4 max-w-3xl text-lg text-slate-600 dark:text-slate-300">
+            Har bir kursdan modu-l, dars, mashq va challenge lar orqali robototexnika asoslarini o’rganing.
           </p>
         </div>
+
+        <LearningPath />
       </div>
     </div>
   );
