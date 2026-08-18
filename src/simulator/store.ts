@@ -16,6 +16,7 @@ interface SimulatorState {
   robot: SimulatorRobotState;
   tick: (dt: number) => void;
   setKey: (key: string, pressed: boolean) => void;
+  setRobot: (robot: Partial<SimulatorRobotState>) => void;
   reset: () => void;
 }
 
@@ -113,6 +114,13 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       keys: {
         ...state.keys,
         [key.toLowerCase()]: pressed,
+      },
+    })),
+  setRobot: (robot) =>
+    set((state) => ({
+      robot: {
+        ...state.robot,
+        ...robot,
       },
     })),
   reset: () =>
